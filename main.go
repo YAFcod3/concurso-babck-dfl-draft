@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"strconv"
 	"time"
 
 	"exchange-rate/utils/data_updater"
@@ -11,26 +12,79 @@ import (
 )
 
 func main() {
-	// Inicializa el cliente de Redis
+	// Conexión a Redis
 	client := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
 
-	data_updater.StartExchangeRateUpdater(client, 1*time.Minute)
+	// Conexión a MongoDB
+	// mongoClient, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer mongoClient.Disconnect(context.Background())
+
+	// Iniciar actualizador de tasas de cambio
+	data_updater.StartExchangeRateUpdater(client, 1*time.Hour)
 
 	app := fiber.New()
 
-	app.Get("/exchange-rates/:currency", func(c *fiber.Ctx) error {
-		currency := c.Params("currency")
-		rate, err := client.Get(c.Context(), currency).Float64()
-		if err != nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": fmt.Sprintf("Exchange rate for %s not found", currency),
-			})
+	app.Post("/convert", func(c *fiber.Ctx) error {
+		type ConversionRequest struct {
+			FromCurrency    string  `json:"fromCurrency"`
+			ToCurrency      string  `json:"toCurrency"`
+			Amount          float64 `json:"amount"`
+			TransactionType string  `json:"transactionType"`
 		}
+
+		var req ConversionRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+		}
+
+		// Verificar si el `transactionType` existe en MongoDB
+		// collection := mongoClient.Database("your_database").Collection("transaction_types")
+		// filter := bson.M{"_id": req.TransactionType}
+		// var result bson.M
+		// err := collection.FindOne(context.Background(), filter).Decode(&result)
+		// if err != nil {
+		// 	return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+		// 		"code":    "INVALID_TRANSACTION_TYPE",
+		// 		"message": "The transaction type ID is invalid. Please provide a valid transaction type.",
+		// 	})
+		// }
+
+		// Obtener las tasas de cambio desde Redis
+		fromRate, err := client.HGet(context.Background(), "exchange_rates", req.FromCurrency).Result()
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "From currency not found"})
+		}
+
+		toRate, err := client.HGet(context.Background(), "exchange_rates", req.ToCurrency).Result()
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "To currency not found"})
+		}
+
+		// Realizar la conversión
+		fromRateFloat, _ := strconv.ParseFloat(fromRate, 64)
+		toRateFloat, _ := strconv.ParseFloat(toRate, 64)
+
+		convertedAmount := (req.Amount / fromRateFloat) * toRateFloat
+
+		// Generar el código de transacción (aquí puedes añadir tu lógica de generación de código)
+
+		//todo ok entonces guardar en base de datos estos dettales para desp tener un historial de transacciones y oitras estadisticas necesarias
 		return c.JSON(fiber.Map{
-			"currency": currency,
-			"rate":     rate,
+			"transactionId":   "abc123def456",
+			"transactionCode": "T24101811210001",
+			"fromCurrency":    req.FromCurrency,
+			"toCurrency":      req.ToCurrency,
+			"amount":          req.Amount,
+			"amountConverted": convertedAmount,
+			"exchangeRate":    toRateFloat / fromRateFloat,
+			// "transactionType": result["name"], // supón que 'name' es el nombre del tipo de transacción en MongoDB
+			"createdAt": time.Now().Format(time.RFC3339),
+			"userId":    "id del usuario que hizo la transacción", // lo obtengo por el middleware y el jwt
 		})
 	})
 

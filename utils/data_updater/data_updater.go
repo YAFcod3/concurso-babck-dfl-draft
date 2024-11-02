@@ -12,15 +12,21 @@ import (
 )
 
 type ExchangeRate struct {
-	Rates map[string]float64 `json:"rates"`
+	Base      string             `json:"base"`
+	Timestamp int64              `json:"timestamp"`
+	Rates     map[string]float64 `json:"rates"`
 }
 
 func StartExchangeRateUpdater(client *redis.Client, interval time.Duration) {
 	ctx := context.Background()
 
-	// Definicion d la función para obtener y almacenar tasas de cambio
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// Función para obtener y almacenar tasas de cambio
 	fetchExchangeRates := func() {
-		resp, err := http.Get("https://concurso.dofleini.com/exchange-rate/api/latest?base=USD")
+		resp, err := httpClient.Get("https://concurso.dofleini.com/exchange-rate/api/latest?base=USD")
 		if err != nil {
 			fmt.Println("Error fetching exchange rates:", err)
 			return
@@ -46,12 +52,21 @@ func StartExchangeRateUpdater(client *redis.Client, interval time.Duration) {
 			return
 		}
 
-		// Almacenar las tasas en Redis
+		// Usar una única clave para almacenar las tasas
+		key := "exchange_rates"
+
+		// Almacenar en Redis
 		for currency, rate := range exchangeRate.Rates {
-			err := client.Set(ctx, currency, rate, 0).Err()
+			err := client.HSet(ctx, key, currency, rate).Err()
 			if err != nil {
 				fmt.Println("Error storing exchange rate in Redis:", err)
 			}
+		}
+
+		// Actualizar base y timestamp
+		err = client.HSet(ctx, key, "base", exchangeRate.Base, "timestamp", exchangeRate.Timestamp).Err()
+		if err != nil {
+			fmt.Println("Error storing exchange metadata in Redis:", err)
 		}
 
 		fmt.Println("Exchange rates updated successfully!")
@@ -60,11 +75,11 @@ func StartExchangeRateUpdater(client *redis.Client, interval time.Duration) {
 	// Ejecuto la primera actualización al iniciar
 	fetchExchangeRates()
 
-	// Creo un ticker para actualizar cada intervalo definido
+	// Actualización periódica
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	go func() { // gourutina
+	go func() {
 		for range ticker.C {
 			fetchExchangeRates()
 		}
