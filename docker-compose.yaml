@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    container_name: redis_server_exchange_rate
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_APPENDONLY=yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - redis_network
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  redis_network:
+    driver: bridge
