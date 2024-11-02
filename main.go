@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
@@ -18,11 +21,11 @@ func main() {
 	})
 
 	// Conexión a MongoDB
-	// mongoClient, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer mongoClient.Disconnect(context.Background())
+	mongoClient, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		panic(err)
+	}
+	defer mongoClient.Disconnect(context.Background())
 
 	// Iniciar actualizador de tasas de cambio
 	data_updater.StartExchangeRateUpdater(client, 1*time.Hour)
@@ -54,26 +57,43 @@ func main() {
 		// 	})
 		// }
 
-		// Obtener las tasas de cambio desde Redis
-		fromRate, err := client.HGet(context.Background(), "exchange_rates", req.FromCurrency).Result()
-		if err != nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "From currency not found"})
+		// Obtener la tasa de cambio desde Redis para la moneda de origen
+		fromRateFloat := 1.0 // Valor por defecto si la moneda de origen es USD
+		if req.FromCurrency != "USD" {
+			fromRate, err := client.HGet(context.Background(), "exchange_rates", req.FromCurrency).Result()
+			if err != nil {
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "From currency not found"})
+			}
+			fmt.Println("fromRate" + fromRate)
+			fromRateFloat, err = strconv.ParseFloat(fromRate, 64)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid from currency rate"})
+			}
 		}
 
-		toRate, err := client.HGet(context.Background(), "exchange_rates", req.ToCurrency).Result()
-		if err != nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "To currency not found"})
-		}
+		// Obtener la tasa de cambio desde Redis para la moneda de destino
+		toRateFloat := 1.0 // Valor por defecto si la moneda de destino es USD
+		if req.ToCurrency != "USD" {
+			toRate, err := client.HGet(context.Background(), "exchange_rates", req.ToCurrency).Result()
+			if err != nil {
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "To currency not found"})
+			}
+			fmt.Println("toRate" + toRate)
 
-		// Realizar la conversión
-		fromRateFloat, _ := strconv.ParseFloat(fromRate, 64)
-		toRateFloat, _ := strconv.ParseFloat(toRate, 64)
+			toRateFloat, err = strconv.ParseFloat(toRate, 64)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid to currency rate"})
+			}
+			fmt.Println("toRateFloat", toRateFloat)
+
+		}
 
 		convertedAmount := (req.Amount / fromRateFloat) * toRateFloat
 
 		// Generar el código de transacción (aquí puedes añadir tu lógica de generación de código)
 
 		//todo ok entonces guardar en base de datos estos dettales para desp tener un historial de transacciones y oitras estadisticas necesarias
+
 		return c.JSON(fiber.Map{
 			"transactionId":   "abc123def456",
 			"transactionCode": "T24101811210001",

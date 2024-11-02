@@ -19,12 +19,10 @@ type ExchangeRate struct {
 
 func StartExchangeRateUpdater(client *redis.Client, interval time.Duration) {
 	ctx := context.Background()
-
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 
-	// Función para obtener y almacenar tasas de cambio
 	fetchExchangeRates := func() {
 		resp, err := httpClient.Get("https://concurso.dofleini.com/exchange-rate/api/latest?base=USD")
 		if err != nil {
@@ -52,30 +50,30 @@ func StartExchangeRateUpdater(client *redis.Client, interval time.Duration) {
 			return
 		}
 
-		// Usar una única clave para almacenar las tasas
 		key := "exchange_rates"
+		pipe := client.TxPipeline() // Iniciar pipeline
 
-		// Almacenar en Redis
+		// Almacenar tasas de cambio en el pipeline
 		for currency, rate := range exchangeRate.Rates {
-			err := client.HSet(ctx, key, currency, rate).Err()
-			if err != nil {
-				fmt.Println("Error storing exchange rate in Redis:", err)
-			}
+			pipe.HSet(ctx, key, currency, rate)
 		}
 
-		// Actualizar base y timestamp
-		err = client.HSet(ctx, key, "base", exchangeRate.Base, "timestamp", exchangeRate.Timestamp).Err()
+		// Almacenar base y timestamp en el pipeline
+		pipe.HSet(ctx, key, "base", exchangeRate.Base)
+		pipe.HSet(ctx, key, "timestamp", exchangeRate.Timestamp)
+
+		// Ejecutar pipeline
+		_, err = pipe.Exec(ctx)
 		if err != nil {
-			fmt.Println("Error storing exchange metadata in Redis:", err)
+			fmt.Println("Error storing exchange rates in Redis:", err)
+			return
 		}
 
 		fmt.Println("Exchange rates updated successfully!")
 	}
 
-	// Ejecuto la primera actualización al iniciar
-	fetchExchangeRates()
+	fetchExchangeRates() // Primera actualización
 
-	// Actualización periódica
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 

@@ -12,6 +12,7 @@ services:
       - redis_data:/data
     networks:
       - redis_network
+
   mongo:
     image: mongo:7.0
     container_name: mongo_server_exchange_rate
@@ -21,7 +22,7 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=root
       - MONGO_INITDB_ROOT_PASSWORD=example
     volumes:
-      - mongo_data:data/db
+      - mongo_data:/data/db
     networks:
       - app_network
 
@@ -33,4 +34,6 @@ volumes:
 
 networks:
   redis_network:
+    driver: bridge
+  app_network:
     driver: bridge
