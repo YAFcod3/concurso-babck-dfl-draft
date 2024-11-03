@@ -4,6 +4,7 @@ import (
 	"exchange-rate/database"
 	"exchange-rate/handlers"
 	"exchange-rate/middleware"
+	"exchange-rate/repository"
 	"exchange-rate/utils/data_updater"
 	"exchange-rate/utils/generate_transaction_code" // Asegúrate de importar el paquete
 	"time"
@@ -30,6 +31,9 @@ func main() {
 
 	// app.Use(middleware.RateLimit(5, time.Minut))
 	// routes.SetupRoutes(app, mongoClient, database.RedisClient, codeGen)
+	mongoDatabase := database.MongoClient.Database("currencyMongoDb")
+
+	transactionTypeRepo := repository.NewTransactionTypeRepository(mongoDatabase)
 
 	app.Post("/register", func(c *fiber.Ctx) error {
 		return handlers.Register(c, database.MongoClient)
@@ -41,9 +45,21 @@ func main() {
 	// app.Post("/convert", middleware.IsAuthenticated(), middleware.VerifyTransactionDuplicated(database.RedisClient), func(c *fiber.Ctx) error {
 	// 	return handlers.ConvertCurrency(c, database.MongoClient, database.RedisClient, codeGen)
 	// })
-
 	app.Post("/convert", middleware.IsAuthenticated(), func(c *fiber.Ctx) error {
 		return handlers.ConvertCurrency(c, database.MongoClient, database.RedisClient, codeGen)
+	})
+
+	app.Post("/api/settings/transactions-types", func(c *fiber.Ctx) error {
+		return handlers.CreateTransactionType(c, transactionTypeRepo)
+	})
+	app.Get("/api/settings/transactions-types", func(c *fiber.Ctx) error {
+		return handlers.GetTransactionTypes(c, transactionTypeRepo)
+	})
+	app.Put("/api/settings/transactions-types/:id", func(c *fiber.Ctx) error {
+		return handlers.UpdateTransactionType(c, transactionTypeRepo)
+	})
+	app.Delete("/api/settings/transactions-types/:id", func(c *fiber.Ctx) error {
+		return handlers.DeleteTransactionType(c, transactionTypeRepo)
 	})
 
 	app.Listen(":3000")
