@@ -92,6 +92,9 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 		}
 	}
 
+	userId := c.Locals("userId").(string)
+	fmt.Println("userId : ", userId)
+
 	// Generar el código de transacción
 	transactionCode, err := codeGen.GenerateCode()
 	if err != nil {
@@ -116,7 +119,8 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 		ExchangeRate:    toRateFloat / fromRateFloat,
 		TransactionType: req.TransactionType,
 		CreatedAt:       time.Now(),
-		UserID:          "id del usuario que hizo la transacción", // Obtén este valor de tu lógica de usuario
+		UserID:          userId,
+		// UserID:          "id del usuario que hizo la transacción", // Obtén este valor de tu lógica de usuario
 	}
 
 	// Guardar la transacción en MongoDB
