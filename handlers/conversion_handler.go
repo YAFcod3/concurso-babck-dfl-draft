@@ -1,4 +1,3 @@
-// handlers/currency.go
 package handlers
 
 import (
@@ -10,6 +9,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -25,6 +25,11 @@ type Transaction struct {
 	TransactionType string    `bson:"transaction_type"`
 	CreatedAt       time.Time `bson:"created_at"`
 	UserID          string    `bson:"user_id"`
+}
+
+type TransactionType struct {
+	ID   primitive.ObjectID `bson:"_id"`
+	Name string             `bson:"name"`
 }
 
 // ConvertCurrency maneja la conversión de moneda.
@@ -52,19 +57,34 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 		})
 	}
 
-	// Verificar si el `transactionType` existe en MongoDB
-	// collection := mongoClient.Database("currencyMongoDb").Collection("transaction_types")
-	// filter := bson.M{"_id": req.TransactionType}
-	// var result bson.M
-	// err := collection.FindOne(context.Background(), filter).Decode(&result)
-	// if err != nil {
-	// 	return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-	// 		"code":    "INVALID_TRANSACTION_TYPE",
-	// 		"message": "The transaction type ID is invalid. Please provide a valid transaction type.",
-	// 	})
-	// }
+	// !! 	Validar que tanto la moneda de origen (fromCurrency) como la de
+	//  destino (toCurrency) sean parte de la lista de monedas
+	//  soportadas.
 
-	// Obtener
+	// / Verificar si el `transactionType` existe en MongoDB
+	//  hacer en un archivo aparte
+	collection := mongoClient.Database("currencyMongoDb").Collection("transaction_types")
+
+	// Convertir el ID de string a ObjectID
+	transactionTypeID, err := primitive.ObjectIDFromHex(req.TransactionType)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"code":    "INVALID_ID",
+			"message": "Invalid transaction type ID format.",
+		})
+	}
+
+	filter := bson.M{"_id": transactionTypeID}
+	fmt.Println("filter : ", filter)
+
+	var transactionType TransactionType
+	err = collection.FindOne(context.Background(), filter).Decode(&transactionType)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"code":    "INVALID_TRANSACTION_TYPE",
+			"message": fmt.Sprintf("The transaction type ID '%s' is invalid. Please provide a valid transaction type.", req.TransactionType),
+		})
+	}
 
 	// Obtener la tasa de cambio desde Redis para la moneda de origen
 	fromRateFloat := 1.0 // Valor por defecto si la moneda de origen es USD
@@ -120,7 +140,6 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 		TransactionType: req.TransactionType,
 		CreatedAt:       time.Now(),
 		UserID:          userId,
-		// UserID:          "id del usuario que hizo la transacción", // Obtén este valor de tu lógica de usuario
 	}
 
 	// Guardar la transacción en MongoDB
@@ -133,12 +152,12 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 	transactionID := result.InsertedID.(primitive.ObjectID).Hex()
 
 	return c.JSON(fiber.Map{
-		// "transactionId":   transactionID,
 		"transactionId":   transactionID,
 		"transactionCode": transaction.TransactionCode,
 		"fromCurrency":    req.FromCurrency,
 		"toCurrency":      req.ToCurrency,
 		"amount":          req.Amount,
+		"TransactionType": transactionType.Name,
 		"amountConverted": convertedAmount,
 		"exchangeRate":    toRateFloat / fromRateFloat,
 		"createdAt":       transaction.CreatedAt.Format(time.RFC3339),

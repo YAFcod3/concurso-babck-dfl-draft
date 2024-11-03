@@ -6,7 +6,7 @@ import (
 	"exchange-rate/middleware"
 	"exchange-rate/repository"
 	"exchange-rate/utils/data_updater"
-	"exchange-rate/utils/generate_transaction_code" // Asegúrate de importar el paquete
+	"exchange-rate/utils/generate_transaction_code"
 	"time"
 
 	"github.com/gofiber/fiber/v2"

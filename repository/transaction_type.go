@@ -26,7 +26,6 @@ func NewTransactionTypeRepository(db *mongo.Database) *TransactionTypeRepository
 	}
 }
 
-// Método para verificar la unicidad del nombre
 func (r *TransactionTypeRepository) IsUniqueTransactionTypeName(name string) (bool, error) {
 	filter := bson.M{"$expr": bson.M{
 		"$eq": []interface{}{
@@ -48,13 +47,11 @@ func (r *TransactionTypeRepository) IsUniqueTransactionTypeName(name string) (bo
 	return false, nil // Nombre ya existe
 }
 
-// Método para crear un tipo de transacción
 func (r *TransactionTypeRepository) Create(tt *TransactionType) error {
 	_, err := r.collection.InsertOne(context.TODO(), tt)
 	return err
 }
 
-// Método para obtener todos los tipos de transacción
 func (r *TransactionTypeRepository) FindAll() ([]TransactionType, error) {
 	var transactionTypes []TransactionType
 	cursor, err := r.collection.Find(context.TODO(), bson.D{})
@@ -73,13 +70,11 @@ func (r *TransactionTypeRepository) FindAll() ([]TransactionType, error) {
 	return transactionTypes, nil
 }
 
-// Método para actualizar un tipo de transacción
 func (r *TransactionTypeRepository) Update(id primitive.ObjectID, tt *TransactionType) error {
 	_, err := r.collection.UpdateOne(context.TODO(), bson.M{"_id": id}, bson.M{"$set": tt})
 	return err
 }
 
-// Método para eliminar un tipo de transacción
 func (r *TransactionTypeRepository) Delete(id primitive.ObjectID) error {
 	_, err := r.collection.DeleteOne(context.TODO(), bson.M{"_id": id})
 	return err

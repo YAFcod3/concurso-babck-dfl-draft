@@ -32,7 +32,7 @@ func StartExchangeRateUpdater(client *redis.Client, interval time.Duration) {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := ioutil.ReadAll(resp.Body) // ! ver q pasa aqui q sale tachado
 			fmt.Printf("Error: received status code %d\nResponse body: %s\n", resp.StatusCode, string(body))
 			return
 		}
