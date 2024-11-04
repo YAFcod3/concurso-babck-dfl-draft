@@ -1,4 +1,3 @@
-// routes/routes.go
 package routes
 
 import (
@@ -8,14 +7,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func SetupRoutes(app *fiber.App, mongoClient *mongo.Client) {
-	app.Post("/register", func(c *fiber.Ctx) error {
+func SetupAuthRoutes(app *fiber.App, mongoClient *mongo.Client) {
+	authGroup := app.Group("/api/auth")
+
+	authGroup.Post("/register", func(c *fiber.Ctx) error {
 		return handlers.Register(c, mongoClient)
 	})
 
-	app.Post("/login", func(c *fiber.Ctx) error {
+	authGroup.Post("/login", func(c *fiber.Ctx) error {
 		return handlers.Login(c, mongoClient)
 	})
-
-	// Otras rutas...
 }

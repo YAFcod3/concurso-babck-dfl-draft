@@ -48,7 +48,7 @@ func (cg *CodeGenerator) GenerateCode() (string, error) {
 			log.Println("Error al actualizar datos en Redis:", err)
 		}
 	} else if cg.counter == 100000000 {
-		// Si el contador ha llegado a 10000, detener la generación de códigos hasta la próxima hora
+		// Si el contador ha llegado a 100000000, detener la generación de códigos hasta la próxima hora
 		return "", fmt.Errorf("límite de códigos alcanzado para la hora actual")
 	}
 

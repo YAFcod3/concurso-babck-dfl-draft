@@ -2,9 +2,8 @@ package main
 
 import (
 	"exchange-rate/database"
-	"exchange-rate/handlers"
-	"exchange-rate/middleware"
 	"exchange-rate/repository"
+	"exchange-rate/routes"
 	"exchange-rate/utils/data_updater"
 	"exchange-rate/utils/generate_transaction_code"
 	"time"
@@ -14,8 +13,10 @@ import (
 )
 
 func main() {
+	// Inicializar la base de datos
 	database.Init()
 	defer database.Close()
+	mongoDatabase := database.MongoClient.Database("currencyMongoDb")
 
 	// Iniciar actualizador de tasas de cambio
 	data_updater.StartExchangeRateUpdater(database.RedisClient, 1*time.Hour)
@@ -24,43 +25,36 @@ func main() {
 	codeGen := &generate_transaction_code.CodeGenerator{Client: database.RedisClient}
 	codeGen.LoadLastCounter()
 
+	// Crear la aplicación Fiber
 	app := fiber.New()
 	app.Use(cors.New())
 
 	// app.Post("/convert", middleware.RateLimit(5, time.Minute), middleware.IsAuthenticated(), handlers.ConvertCurrency)
 
-	// app.Use(middleware.RateLimit(5, time.Minut))
-	// routes.SetupRoutes(app, mongoClient, database.RedisClient, codeGen)
-	mongoDatabase := database.MongoClient.Database("currencyMongoDb")
+	// app.Get("/metrics", func(c *fiber.Ctx) error {
+	// 	// Obtener las métricas de Prometheus
+	// 	metrics, err := prometheus.DefaultGatherer.Gather()
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-	transactionTypeRepo := repository.NewTransactionTypeRepository(mongoDatabase)
+	// 	metricFamilies := ""
+	// 	for _, mf := range metrics {
+	// 		metricFamilies += mf.String() + "\n"
+	// 	}
 
-	app.Post("/register", func(c *fiber.Ctx) error {
-		return handlers.Register(c, database.MongoClient)
-	})
-
-	app.Post("/login", func(c *fiber.Ctx) error {
-		return handlers.Login(c, database.MongoClient)
-	})
-	// app.Post("/convert", middleware.IsAuthenticated(), middleware.VerifyTransactionDuplicated(database.RedisClient), func(c *fiber.Ctx) error {
-	// 	return handlers.ConvertCurrency(c, database.MongoClient, database.RedisClient, codeGen)
+	// 	// Establecer el tipo de contenido y devolver las métricas
+	// 	c.Set("Content-Type", "text/plain; version=0.0.4")
+	// 	c.SendString(metricFamilies)
+	// 	return nil
 	// })
-	app.Post("/convert", middleware.IsAuthenticated(), func(c *fiber.Ctx) error {
-		return handlers.ConvertCurrency(c, database.MongoClient, database.RedisClient, codeGen)
-	})
 
-	app.Post("/api/settings/transactions-types", func(c *fiber.Ctx) error {
-		return handlers.CreateTransactionType(c, transactionTypeRepo)
-	})
-	app.Get("/api/settings/transactions-types", func(c *fiber.Ctx) error {
-		return handlers.GetTransactionTypes(c, transactionTypeRepo)
-	})
-	app.Put("/api/settings/transactions-types/:id", func(c *fiber.Ctx) error {
-		return handlers.UpdateTransactionType(c, transactionTypeRepo)
-	})
-	app.Delete("/api/settings/transactions-types/:id", func(c *fiber.Ctx) error {
-		return handlers.DeleteTransactionType(c, transactionTypeRepo)
-	})
+	// Configurar las rutas
+	transactionTypeRepo := repository.NewTransactionTypeRepository(mongoDatabase)
+	routes.SetupAuthRoutes(app, database.MongoClient)
+	routes.SetupConversionRoutes(app, database.MongoClient, database.RedisClient, codeGen)
+	routes.SetupTransactionTypeRoutes(app, transactionTypeRepo)
 
-	app.Listen(":3000")
+	// Escuchar en el puerto 8000
+	app.Listen(":8000")
 }
