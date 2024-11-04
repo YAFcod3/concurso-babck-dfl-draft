@@ -32,7 +32,6 @@ type TransactionType struct {
 	Name string             `bson:"name"`
 }
 
-// ConvertCurrency maneja la conversión de moneda.
 func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis.Client, codeGen *generate_transaction_code.CodeGenerator) error {
 	type ConversionRequest struct {
 		FromCurrency    string  `json:"fromCurrency"`
@@ -49,7 +48,6 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 		})
 	}
 
-	// Validar campos vacíos
 	if req.FromCurrency == "" || req.ToCurrency == "" || req.TransactionType == "" || req.Amount <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"code":    "VALIDATION_ERROR",
@@ -142,7 +140,6 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 		UserID:          userId,
 	}
 
-	// Guardar la transacción en MongoDB
 	transCollection := mongoClient.Database("currencyMongoDb").Collection("transactions")
 	result, err := transCollection.InsertOne(context.Background(), transaction)
 	if err != nil {
