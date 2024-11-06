@@ -1,15 +1,30 @@
+# global:
+#   scrape_interval: 15s
+#   evaluation_interval: 15s
+
+# scrape_configs:
+#   - job_name: 'go-app'
+#     static_configs:
+#       - targets: ['my-app:8000']
+#     # - targets: ['host.docker.internal:8000']  # Usa el nombre del servicio definido en el compose
+#     metrics_path: '/metrics'      # La ruta donde expones las métricas
+
+#   - job_name: 'prometheus'
+#     static_configs:
+#       - targets: ['localhost:9090']
+#       # - targets: ['host.docker.internal:9090']
+
+
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'redis'
+  - job_name: 'go-app'
     static_configs:
-      - targets: ['redis:6379']
+      - targets: ['go_app:8000']  # Ajuste: el nombre de contenedor `go_app` de `docker-compose.yml`
+    metrics_path: '/metrics'
 
-  - job_name: 'mongo'
+  - job_name: 'prometheus'
     static_configs:
-      - targets: ['mongo:27017']
-
-  - job_name: 'fiber-app'
-    static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['localhost:9090']
