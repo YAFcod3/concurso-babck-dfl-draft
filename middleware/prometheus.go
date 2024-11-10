@@ -85,13 +85,11 @@ func RegisterPrometheus(app *fiber.App) {
 		return err
 	})
 
-	// app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 	app.Get("/metrics", func(c *fiber.Ctx) error {
 		log.Printf("Metrics endpoint accessed from: %s", c.IP())
 		return adaptor.HTTPHandler(promhttp.Handler())(c)
 	})
 
-	// Añadir un endpoint de health check
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})

@@ -1,19 +1,19 @@
 version: '3.8'
 
 services:
-  my-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: go_app
-    ports:
-      - "8000:8000"
-    depends_on:
-      - redis
-      - mongo
-    restart: always
-    networks:
-      - app_network
+  # my-app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: go_app
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - redis
+  #     - mongo
+  #   restart: always
+  #   networks:
+  #     - app_network
 
   redis:
     image: redis:latest

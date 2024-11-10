@@ -17,12 +17,16 @@ var (
 func Init() {
 	// Conexión a Redis
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr: "redis:6379", // redis x localhost
+		Addr: "localhost:6379", // redis x localhost
 	})
+	// RedisClient = redis.NewClient(&redis.Options{
+	// 	Addr: "redis:6379", // redis x localhost
+	// })
 
 	// Conexión a MongoDB
 	var err error
-	MongoClient, err = mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://root:example@mongo:27017")) // mongo x localhost
+	// MongoClient, err = mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://root:example@mongo:27017"))
+	MongoClient, err = mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://root:example@localhost:27017")) // mongo x localhost
 	if err != nil {
 		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}

@@ -21,7 +21,6 @@ func CreateTransactionType(c *fiber.Ctx, repo *repository.TransactionTypeReposit
 	if !isUnique {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Transaction type name must be unique"})
 	}
-
 	tt.ID = primitive.NewObjectID()
 	err = repo.Create(&tt)
 	if err != nil {

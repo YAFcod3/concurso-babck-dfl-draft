@@ -1,4 +1,3 @@
-// repository/transaction_type.go
 package repository
 
 import (
@@ -10,9 +9,9 @@ import (
 )
 
 type TransactionType struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty"`
-	Name        string             `bson:"name"`
-	Description string             `bson:"description,omitempty"`
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name        string             `bson:"name" json:"name"`
+	Description string             `bson:"description,omitempty" json:"description"`
 }
 
 type TransactionTypeRepository struct {
