@@ -2,11 +2,12 @@ package main
 
 import (
 	"exchange-rate/database"
-	"exchange-rate/handlers"
 	"exchange-rate/middleware"
 	"exchange-rate/repository"
 	"exchange-rate/routes"
+	"exchange-rate/utils/data_updater"
 	"exchange-rate/utils/generate_transaction_code"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -17,7 +18,7 @@ func main() {
 	defer database.Close()
 	mongoDatabase := database.MongoClient.Database("currencyMongoDb")
 
-	// data_updater.StartExchangeRateUpdater(database.RedisClient, 1*time.Hour)
+	data_updater.StartExchangeRateUpdater(database.RedisClient, 1*time.Hour)
 
 	codeGen := &generate_transaction_code.CodeGenerator{Client: database.RedisClient}
 	codeGen.LoadLastCounter()
@@ -28,17 +29,7 @@ func main() {
 	middleware.RegisterPrometheus(app)
 
 	transactionTypeRepo := repository.NewTransactionTypeRepository(mongoDatabase)
-	routes.SetupAuthRoutes(app, database.MongoClient)
-	routes.SetupConversionRoutes(app, database.MongoClient, database.RedisClient, codeGen)
-	routes.SetupTransactionTypeRoutes(app, transactionTypeRepo)
-
-	app.Get("/api/statistics", func(c *fiber.Ctx) error {
-		return handlers.GetStatistics(c, database.MongoClient)
-	})
-
-	app.Get("/api/transactions", func(c *fiber.Ctx) error {
-		return handlers.GetTransactions(c, database.MongoClient)
-	})
+	routes.RegisterRoutes(app, database.MongoClient, database.RedisClient, codeGen, transactionTypeRepo)
 
 	app.Listen(":8000")
 }
