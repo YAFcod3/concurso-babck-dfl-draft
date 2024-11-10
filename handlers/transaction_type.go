@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"exchange-rate/models"
 	"exchange-rate/repository"
 
 	"github.com/gofiber/fiber/v2"
@@ -8,7 +9,7 @@ import (
 )
 
 func CreateTransactionType(c *fiber.Ctx, repo *repository.TransactionTypeRepository) error {
-	var tt repository.TransactionType
+	var tt models.TransactionType
 
 	if err := c.BodyParser(&tt); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
@@ -45,7 +46,7 @@ func UpdateTransactionType(c *fiber.Ctx, repo *repository.TransactionTypeReposit
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
 	}
 
-	var tt repository.TransactionType
+	var tt models.TransactionType
 	if err := c.BodyParser(&tt); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}

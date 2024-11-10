@@ -2,17 +2,12 @@ package repository
 
 import (
 	"context"
+	"exchange-rate/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-type TransactionType struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name        string             `bson:"name" json:"name"`
-	Description string             `bson:"description,omitempty" json:"description"`
-}
 
 type TransactionTypeRepository struct {
 	collection *mongo.Collection
@@ -33,7 +28,7 @@ func (r *TransactionTypeRepository) IsUniqueTransactionTypeName(name string) (bo
 		},
 	}}
 
-	var existing TransactionType
+	var existing models.TransactionType
 	err := r.collection.FindOne(context.TODO(), filter).Decode(&existing)
 
 	if err != nil {
@@ -46,13 +41,13 @@ func (r *TransactionTypeRepository) IsUniqueTransactionTypeName(name string) (bo
 	return false, nil // Nombre ya existe
 }
 
-func (r *TransactionTypeRepository) Create(tt *TransactionType) error {
+func (r *TransactionTypeRepository) Create(tt *models.TransactionType) error {
 	_, err := r.collection.InsertOne(context.TODO(), tt)
 	return err
 }
 
-func (r *TransactionTypeRepository) FindAll() ([]TransactionType, error) {
-	var transactionTypes []TransactionType
+func (r *TransactionTypeRepository) FindAll() ([]models.TransactionType, error) {
+	var transactionTypes []models.TransactionType
 	cursor, err := r.collection.Find(context.TODO(), bson.D{})
 	if err != nil {
 		return nil, err
@@ -60,7 +55,7 @@ func (r *TransactionTypeRepository) FindAll() ([]TransactionType, error) {
 	defer cursor.Close(context.TODO())
 
 	for cursor.Next(context.TODO()) {
-		var tt TransactionType
+		var tt models.TransactionType
 		if err := cursor.Decode(&tt); err != nil {
 			return nil, err
 		}
@@ -69,7 +64,7 @@ func (r *TransactionTypeRepository) FindAll() ([]TransactionType, error) {
 	return transactionTypes, nil
 }
 
-func (r *TransactionTypeRepository) Update(id primitive.ObjectID, tt *TransactionType) error {
+func (r *TransactionTypeRepository) Update(id primitive.ObjectID, tt *models.TransactionType) error {
 	_, err := r.collection.UpdateOne(context.TODO(), bson.M{"_id": id}, bson.M{"$set": tt})
 	return err
 }

@@ -6,11 +6,10 @@ import (
 	"exchange-rate/middleware"
 	"exchange-rate/repository"
 	"exchange-rate/routes"
-	"exchange-rate/utils/data_updater"
 	"exchange-rate/utils/generate_transaction_code"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"time"
 )
 
 func main() {
@@ -18,7 +17,7 @@ func main() {
 	defer database.Close()
 	mongoDatabase := database.MongoClient.Database("currencyMongoDb")
 
-	data_updater.StartExchangeRateUpdater(database.RedisClient, 1*time.Hour)
+	// data_updater.StartExchangeRateUpdater(database.RedisClient, 1*time.Hour)
 
 	codeGen := &generate_transaction_code.CodeGenerator{Client: database.RedisClient}
 	codeGen.LoadLastCounter()
@@ -35,6 +34,10 @@ func main() {
 
 	app.Get("/api/statistics", func(c *fiber.Ctx) error {
 		return handlers.GetStatistics(c, database.MongoClient)
+	})
+
+	app.Get("/api/transactions", func(c *fiber.Ctx) error {
+		return handlers.GetTransactions(c, database.MongoClient)
 	})
 
 	app.Listen(":8000")

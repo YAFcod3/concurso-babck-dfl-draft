@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"exchange-rate/models"
 	"exchange-rate/utils/generate_transaction_code"
 	"fmt"
 	"strconv"
@@ -14,34 +15,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type TransactionStatus string
-
 const (
-	StatusSuccessful TransactionStatus = "successful"
-	StatusFailed     TransactionStatus = "failed"
-	StatusPending    TransactionStatus = "pending"
+	StatusSuccessful models.TransactionStatus = "successful"
+	StatusFailed     models.TransactionStatus = "failed"
+	StatusPending    models.TransactionStatus = "pending"
 )
 
-func IsValidTransactionStatus(status TransactionStatus) bool {
+func IsValidTransactionStatus(status models.TransactionStatus) bool {
 	switch status {
 	case StatusSuccessful, StatusFailed, StatusPending:
 		return true
 	default:
 		return false
 	}
-}
-
-type Transaction struct {
-	TransactionCode   string             `bson:"transaction_code" json:"transactionCode"`
-	FromCurrency      string             `bson:"from_currency" json:"fromCurrency"`
-	ToCurrency        string             `bson:"to_currency" json:"toCurrency"`
-	Amount            float64            `bson:"amount" json:"amount"`
-	AmountConverted   float64            `bson:"amount_converted" json:"amountConverted"`
-	ExchangeRate      float64            `bson:"exchange_rate" json:"exchangeRate"`
-	TransactionTypeID primitive.ObjectID `bson:"transaction_type_id" json:"transactionTypeId"`
-	CreatedAt         time.Time          `bson:"created_at" json:"createdAt"`
-	UserID            string             `bson:"user_id" json:"userId"`
-	Status            TransactionStatus  `bson:"status"`
 }
 
 type ConversionRequest struct {
@@ -114,7 +100,7 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 
 	convertedAmount := (req.Amount / fromRateFloat) * toRateFloat
 
-	transaction := Transaction{
+	transaction := models.Transaction{
 		TransactionCode:   transactionCode,
 		FromCurrency:      req.FromCurrency,
 		ToCurrency:        req.ToCurrency,
@@ -149,9 +135,9 @@ func ConvertCurrency(c *fiber.Ctx, mongoClient *mongo.Client, redisClient *redis
 	})
 }
 
-func saveFailedTransaction(mongoClient *mongo.Client, req ConversionRequest, status TransactionStatus, userId string, errorMsg string) error {
+func saveFailedTransaction(mongoClient *mongo.Client, req ConversionRequest, status models.TransactionStatus, userId string, errorMsg string) error {
 
-	transaction := Transaction{
+	transaction := models.Transaction{
 		FromCurrency: req.FromCurrency,
 		ToCurrency:   req.ToCurrency,
 		Amount:       req.Amount,
